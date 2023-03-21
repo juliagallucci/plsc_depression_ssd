@@ -1,0 +1,70 @@
+---
+title: "functional_connectivity"
+author: "Julia Gallucci"
+date: "21/03/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#load libraries
+library(corrr)
+library(readr)
+library(psych)
+```
+
+```{r}
+# create file list of resting-state time series 
+files_rest_ts <- list.files(path= ".", recursive=T, full.names=F, pattern="^.*_RS_6mm_GSR_glasser_tian_meants.csv$")
+
+# create list of IDs
+ptlist <- scan("/projects/jgallucci/SPINS_PNSC_DTI_RTMSWM/all_sub.txt", what="", sep="\n")
+
+# read in time series files
+rest_ts <- lapply(files_rest_ts, read_csv, col_names = FALSE)
+
+# transpose time series
+rest_ts <- lapply(rest_ts, t)
+
+# Name each rs dataframe with subids
+names(rest_ts) <- ptlist
+
+# Read in glassier and tien atlas info
+G_atlas_info <- read.csv(file = "/projects/loliver/SPINS_PLS_Conn/data/parcellations/Glasser_Tian_roi_info.csv", header=T)
+
+# add labels to df columns
+for (i in names(rest_ts)) {
+  colnames(rest_ts[[i]]) <- as.vector(G_atlas_info$atlas_roi)
+  rest_ts[[i]] <- data.frame(rest_ts[[i]])
+}
+
+#generate cor matrices for each participant
+rest_cor <- lapply(rest_ts, correlate)
+
+#extract lower triangle
+rest_cor <- lapply(rest_cor, shave)
+
+# create individual dataframes with cor matrices for each participant
+rest_cor_str <- lapply(rest_cor, stretch, na.rm=F)
+rest_cor_stru <- lapply(rest_cor_str, unite, col="rois", 1:2, sep="-", remove=T)
+rest_cor_df <- lapply(rest_cor_stru, data.frame)
+cor_names <- as.vector(rest_cor_df[[1]][,1])
+for (i in names(rest_cor_df)) {
+  rest_cor_df[[i]] <- data.frame(rest_cor_df[[i]][,2])
+  rest_cor_df[[i]] <- t(rest_cor_df[[i]])
+  colnames(rest_cor_df[[i]]) <- cor_names
+}
+
+# bind rows across df list to generate tibble with all corrs for each participant
+rest_corrs <- do.call("rbind",rest_cor_df)
+rownames(rest_corrs) <- names(rest_cor_df)
+
+# remove columns with only NAs
+rest_corrs <- rest_corrs[,colSums(is.na(rest_corrs)) != nrow(rest_corrs)]
+
+# fisher z transform corrs
+rest_corrs_z  <- fisherz(rest_corrs)
+```
