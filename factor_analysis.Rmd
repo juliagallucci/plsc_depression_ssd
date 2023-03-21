@@ -1,0 +1,35 @@
+---
+title: "Factor_Analysis"
+author: "Julia Gallucci"
+date: "22/02/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+cdss_fa <- Y_non0[,1:8]
+colnames(cdss_fa) <- c("CDSS 1", "CDSS 2","CDSS 3", "CDSS 4","CDSS 5", "CDSS 6","CDSS 7", "CDSS 8")
+library(psych)
+library(nFactors)
+cdss_cor <- cor(cdss_fa, method = "spearman")
+cor.plot(cdss_cor, xlas = 2)
+
+f.analysis <- fa(cdss_fa, nfactors = ncol(cdss_fa), rotate = "varimax")
+ev <- eigen(cdss_cor) # get eigenvalues
+parallel_fa <- parallel(subject=nrow(cdss_fa),var=ncol(cdss_fa),
+               rep=100,cent=.05)
+nS <- nScree(x=ev$values, aparallel=parallel_fa$eigen$qevpea)
+plotnScree(nS) #2 factors selected based on the optimal coordinates and parallel analysis heuristics
+
+f.analysis_2 <- fa(cdss_fa, nfactors =2)
+
+data_Y_non0_factor <-factor.scores(cdss_fa, f.analysis_2)
+
+scores <- data_Y_non0_factor$scores #extract factor scores
+
+data_Y_non0_fa <- cbind(Y_non0, scores) #bind to behavioural scores as a new data frame
+
+```
