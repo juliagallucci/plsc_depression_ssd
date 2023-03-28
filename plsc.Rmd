@@ -1,0 +1,988 @@
+---
+title: "PLSC Analysis Non-Zero Data"
+author: "Julia Gallucci"
+date: "22/02/2023"
+output:
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(999)
+```
+Set up Libraries 
+```{r}
+#devtools::install_github("herveabdi/PTCA4CATA") 
+#install.packages("gridExtra")
+#install.packages("ggplotify")
+#install.packages("grid")
+library(tidyverse)
+library(cowplot)
+library(ggplot2)
+library(gridExtra)
+library(lattice)
+library(patchwork)
+library(TExPosition)
+library(PTCA4CATA)
+library(data4PCCAR)
+library(devtools)
+library(ExPosition)
+library(corrplot)
+library(ggplot2)
+library(R4SPISE2022)
+library(grid)
+library(ggplotify)
+library(tidygraph)
+library(ggraph)
+```
+
+1. Extract only non-0 CDSS data for analysis
+```{r}
+behavioural <- read.csv2('~/Desktop/UOFT PhD/Project_1/behavioural.csv')
+brain <- read.csv2('~/Desktop/UOFT PhD/Project_1/brain.csv')
+X <- brain
+Y <- behavioural
+
+non0_behavioural = Y[(!rowSums(Y[,2:9])==0),]
+non0_brain = X[(!rowSums(Y[,2:9])==0),]
+X_non0 <- non0_brain[,-1]
+Y_non0 <- non0_behavioural[,-1]
+rownames(Y_non0) <- non0_behavioural$'...1'
+rownames(X_non0) <- non0_behavioural$'...1'
+
+```
+
+2. Identify top 10% most variable connections as measured by median absolute deviation to reduce number of connectivity inputs (as per Xia et al., 2018)
+```{r}
+mad_conn <- apply(X_non0, 2, mad)
+# 76636*.1 = 7664
+top_10 <- names(sort(mad_conn, decreasing=TRUE)[1:7664])
+conn_top_10 <- colnames(X_non0[,colnames(X_non0) %in% top_10])
+X_non0 <- as.matrix(X_non0[,colnames(X_non0) %in% top_10]) # x var
+rownames(X_non0) <- non0_behavioural$'...1'
+```
+
+3. Confounds of CPZ equivalence, motion (Mean FD), sex and age were regressed out of both brain and clinical data
+```{r warning=FALSE}
+#Define confounds.
+FD_05_SPINS_PNSC_RTMSWM_CDSS <- read.csv2('~/Desktop/UOFT PhD/Project_1/FD_05_SPINS_PNSC_RTMSWM_CDSS.csv')
+con_mat= data.frame(matrix(ncol=5))
+colnames(con_mat) <- c("record_id","cpz_eq","mean_fd","demo_sex","demo_age_at_enroll")
+non0sub = rownames(X_non0)
+for (subject in non0sub){
+  con_mat= rbind(con_mat, FD_05_SPINS_PNSC_RTMSWM_CDSS[FD_05_SPINS_PNSC_RTMSWM_CDSS$record_id == subject,c(1,2,6,7,9)])
+}
+con_mat = con_mat %>%
+  filter(!row_number() %in% 1)
+
+con_mat <- con_mat[,-1]
+rownames(con_mat) <- non0sub
+
+#behavioural matrix
+behavmat <- Y_non0
+
+#Define values.
+val_pred <- colnames(behavmat)
+
+#Join confounds and values.
+resmat <- cbind(behavmat,con_mat)
+
+#For each value.
+for (val_lab in val_pred) {
+  
+  #Produce residuals.
+  inform <- as.formula(paste0(val_lab,'~',con_mat))
+  respred <- resid(lm(inform,data=resmat))
+  
+  #Replace.
+  behavmat[,val_lab] <- respred
+}
+
+
+#brain matrix
+brainmat <- X_non0
+colnames(brainmat) <- gsub('-','.',colnames(brainmat))
+#Define values.
+val_pred <- colnames(brainmat)
+#Join confounds and values.
+resmat <- cbind(brainmat,con_mat)
+
+#For each value.
+for (val_lab in val_pred) {
+  
+  #Produce residuals.
+  inform <- as.formula(paste0(val_lab,'~',con_mat))
+  respred <- resid(lm(inform,data=resmat))
+  
+  #Replace.
+  brainmat[,val_lab] <- respred
+}
+```
+
+4.Prep data for PLS-C
+```{r}
+#Prepare data.
+data_Y_non0 <- data.frame(behavmat)
+rownames(data_Y_non0) <- non0sub
+data_X_non0 <- data.frame(brainmat)
+rownames(data_X_non0) <- non0sub
+colnames(data_Y_non0) <- c("CDSS 1", "CDSS 2" , "CDSS 3", "CDSS 4","CDSS 5","CDSS 6","CDSS 7", "CDSS 8", 
+                                        "SANS Affective Flattening", "SANS Alogia" , "SANS Avolition", "SANS Anhedonia")
+```
+
+5.Run PLS-C 
+##Permutation
+```{r}
+
+pls.res_regress <- tepPLS(data_X_non0, data_Y_non0, center1 = TRUE, scale1 = "SS1", center2 = TRUE, scale2 = "SS1", DESIGN=NULL, graphs=FALSE)
+
+set.seed(999)
+perm_rs_plsc_regress <- perm4PLSC(data_X_non0, data_Y_non0, center1 = TRUE, scale1 = "SS1", center2 = TRUE, scale2 = "SS1", nIter = 1000, permType = "byColumns")
+perm_rs_plsc_regress$pOmnibus
+```
+
+```{r}
+PlotScree(ev = pls.res_regress$TExPosition.Data$eigs, p.ev = perm_rs_plsc_regress$pEigenvalues, plotKaiser = TRUE, col.ns = "black",col.sig = "red")
+```
+Plot significant permutations 
+```{r}
+zeDim = 1
+perm_lv1 <- prettyHist(
+  distribution = perm_rs_plsc_regress$permEigenvalues[,zeDim], 
+  observed = perm_rs_plsc_regress$fixedEigenvalues[zeDim], 
+  xlim = c(50, 200), # needs to be set by hand
+  border = "white", 
+  main = paste0("Permutation Test for Eigenvalue ",zeDim),
+  xlab = paste0("Eigenvalue ",zeDim), 
+  ylab = "", 
+  counts = FALSE, 
+  cutoffs = c( 0.975)
+)
+
+zeDim = 2
+perm_lv2 <- prettyHist(
+  distribution = perm_rs_plsc_regress$permEigenvalues[,zeDim], 
+  observed = perm_rs_plsc_regress$fixedEigenvalues[zeDim], 
+  xlim = c(50, 150), # needs to be set by hand
+  border = "white", 
+  main = paste0("Permutation Test for Eigenvalue ",zeDim),
+  xlab = paste0("Eigenvalue ",zeDim), 
+  ylab = "", 
+  counts = FALSE, 
+  cutoffs = c( 0.975)
+)
+
+zeDim = 3
+perm_lv3 <-prettyHist(
+  distribution = perm_rs_plsc_regress$permEigenvalues[,zeDim], 
+  observed = perm_rs_plsc_regress$fixedEigenvalues[zeDim], 
+  xlim = c(20, 120), # needs to be set by hand
+  border = "white", 
+  main = paste0("Permutation Test for Eigenvalue ",zeDim),
+  xlab = paste0("Eigenvalue ",zeDim), 
+  ylab = "", 
+  counts = FALSE, 
+  cutoffs = c( 0.975)
+)
+
+```
+##Bootstrap 
+Loading stability
+```{r}
+set.seed(999)
+rs_plsc_boot_regress <- Boot4PLSC(data_X_non0, data_Y_non0, center1 = TRUE, scale1 = "SS1", center2 = TRUE, scale2 = "SS1", nIter = 1000, critical.value = 2, nf2keep = 3)
+
+BR.I <- rs_plsc_boot_regress$bootRatios.i
+BR.J <- rs_plsc_boot_regress$bootRatios.j
+
+laDim = 1
+# Plot the bootstrap ratios for Dimension 1
+ba001.BR1.I <- PrettyBarPlot2(BR.I[,laDim],
+                              threshold = 2,
+                              font.size = 3,
+                              color4bar = gplots::col2hex(pls.res_regress$Plotting.Data$fi.col), # we need hex code
+                              ylab = 'Bootstrap ratios'
+) + ggtitle(paste0('Component ', laDim), subtitle = 'Table 1')
+
+ba002.BR1.J <- PrettyBarPlot2(BR.J[,laDim],
+                              threshold = 2,
+                              font.size = 3,
+                              color4bar = gplots::col2hex(pls.res_regress$Plotting.Data$fj.col), # we need hex code
+                              ylab = 'Bootstrap ratios'
+) + ggtitle("", subtitle = 'Component 1')
+
+# Plot the bootstrap ratios for Dimension 2
+laDim = 2
+ba003.BR2.I <- PrettyBarPlot2(BR.I[,laDim],
+                              threshold = 2,
+                              font.size = 3,
+                              color4bar = gplots::col2hex(pls.res_regress$Plotting.Data$fi.col), # we need hex code
+                              ylab = 'Bootstrap ratios'
+) + ggtitle(paste0('Component ', laDim), subtitle = 'Table 1')
+
+ba004.BR2.J <- PrettyBarPlot2(BR.J[,laDim],
+                              threshold = 2,
+                              font.size = 3,
+                              color4bar = gplots::col2hex(pls.res_regress$Plotting.Data$fj.col), # we need hex code
+                              ylab = 'Bootstrap ratios'
+) + ggtitle("", subtitle = 'Component 2')
+
+# Plot the bootstrap ratios for Dimension 3
+laDim = 3
+ba005.BR3.I <- PrettyBarPlot2(BR.I[,laDim],
+                              threshold = 2,
+                              font.size = 3,
+                              color4bar = gplots::col2hex(pls.res_regress$Plotting.Data$fi.col), # we need hex code
+                              ylab = 'Bootstrap ratios'
+) + ggtitle(paste0('Component ', laDim), subtitle = 'Table 1')
+
+ba006.BR3.J <- PrettyBarPlot2(BR.J[,laDim],
+                              threshold = 2,
+                              font.size = 3,
+                              color4bar = gplots::col2hex(pls.res_regress$Plotting.Data$fj.col), # we need hex code
+                              ylab = 'Bootstrap ratios'
+) + ggtitle("", subtitle = 'Component 3')
+
+grid.arrange(
+  as.grob(ba002.BR1.J),as.grob(ba004.BR2.J),as.grob(ba006.BR3.J),
+  ncol = 3,nrow = 1,
+  top = textGrob("Bootstrap ratios", gp = gpar(fontsize = 18, font = 3))
+)
+
+```
+
+Plot contributions with confidence intervals
+```{r}
+#Extract Confidence Intervals for each LV
+bootstrap_ci = rs_plsc_boot_regress$bootstrapBrick.j
+bootstrap_ci = data.frame(bootstrap_ci)
+lv1_bootstrp= bootstrap_ci[,grep("Dimension.1",colnames(bootstrap_ci))]
+sort_lv1_boot_strp= t(apply(lv1_bootstrp,1,sort))
+#get the 25th and the 975th value
+lv1_ci = data.frame()
+lv1_ci= cbind(sort_lv1_boot_strp[,25])
+lv1_ci= cbind(lv1_ci,sort_lv1_boot_strp[,975])
+lv1_ci <-  lv1_ci[,1:2]^2
+
+
+lv2_bootstrp= bootstrap_ci[,grep("Dimension.2",colnames(bootstrap_ci))]
+sort_lv2_boot_strp= t(apply(lv2_bootstrp,1,sort))
+#get the 25th and the 975th value
+lv2_ci = data.frame()
+lv2_ci= cbind(sort_lv2_boot_strp[,25])
+lv2_ci= cbind(lv2_ci,sort_lv2_boot_strp[,975])
+lv2_ci <-  lv2_ci[,1:2] *abs(lv2_ci[,1:2])
+
+
+lv3_bootstrp= bootstrap_ci[,grep("Dimension.3",colnames(bootstrap_ci))]
+sort_lv3_boot_strp= t(apply(lv3_bootstrp,1,sort))
+#get the 25th and the 975th value
+lv3_ci = data.frame()
+lv3_ci= cbind(sort_lv3_boot_strp[,25])
+lv3_ci= cbind(lv3_ci,sort_lv3_boot_strp[,975])
+lv3_ci <-  lv3_ci[,1:2] *abs(lv3_ci[,1:2])
+```
+
+Important Clinical Symptom contributors for LV1
+```{r fig.height=3, fig.width=4}
+varColors <- list()
+varColors$oc[[1]] <- as.matrix(rep("purple", 7664))
+varColors$oc[[2]] <- as.matrix(c(rep("purple", 8), rep("olivedrab3",4)))
+
+res.pls.plot <- TTAplot(
+  res = pls.res_regress, # Output of tepPLS
+  leDim = c(1,1),
+  color.tab = varColors,
+  tab1.name = "Brain data", # <optional> Name of Table 1 (for printing)
+  tab2.name = "Clinical Symptom data", # <optional> Name of Table 2 (for printing)
+  tab1 = data_X_non0,  # First data table
+  tab2 = data_Y_non0)  # Second data table
+
+res.pls.plot$results.graphs$ctrY.plot + geom_errorbar(aes(ymin = lv1_ci[,1], ymax = lv1_ci[,2])) + ylim(0,70)
+
+```
+Important Clinical Symptom contributors for LV2
+```{r fig.height=3, fig.width=4}
+res.pls.plot <- TTAplot(
+  res = pls.res_regress, # Output of tepPLS
+  leDim = c(1,2),
+  tab1.name = "Brain data", # <optional> Name of Table 1 (for printing)
+  tab2.name = "Clinical Symptom data", # <optional> Name of Table 2 (for printing)
+  color.tab = varColors,
+  color.obs = varColors,
+  tab1 = data_X_non0,  # First data table
+  tab2 = data_Y_non0)  # Second data table
+
+res.pls.plot$results.graphs$ctrY.plot + geom_errorbar(aes(ymin = lv2_ci[,1], ymax = lv2_ci[,2])) + ylim(-25,50) 
+```
+Important Clinical Symptom contributors for LV3
+```{r fig.height=3, fig.width=4}
+res.pls.plot <- TTAplot(
+  res = pls.res_regress, # Output of tepPLS
+  color.tab = varColors,
+  color.obs = varColors,
+  leDim = c(1,3),
+  tab1.name = "Brain data", # <optional> Name of Table 1 (for printing)
+  tab2.name = "Clinical Symptom data", # <optional> Name of Table 2 (for printing)
+  tab1 = data_X_non0,  # First data table
+  tab2 = data_Y_non0)  # Second data table
+
+res.pls.plot$results.graphs$ctrY.plot + geom_errorbar(aes(ymin = lv3_ci[,1], ymax = lv3_ci[,2])) + ylim(-60,20)
+```
+
+
+```{r}
+for (roi_connections in LV3_top_10_pos){
+  roiCons= str_split(roi_connections, "ROI.", simplify = TRUE)
+  roi_1 = paste(roiCons[[1]],'ROI',sep = '')
+  roi_2 = roiCons[[2]]
+  area1 = rois[rois$ROI ==roi_1,]$area
+  network1 = rois[rois$ROI == roi_1,]$net_ColeAnt
+  area2 = rois[rois$ROI ==roi_2,]$area
+  network2 = rois[rois$ROI == roi_2,]$net_ColeAnt
+  cat(roi_connections,'\n')
+  cat(area1 , '-', area2, '\n')
+  cat(network1, '-', network2, '\n')
+  cat('\n')
+}
+
+```
+
+
+
+
+Important Brain Connection contributors for LV3
+original connections valence weighted by contributions
+```{r fig.height=4, fig.width=5}
+# visualize LV3 conn results
+# Generate matrices with contribution values for sig contributors for LV3
+rs_conn_LV3 <- unite(rs_cor_str, col="rois", 1:2, sep=".", remove=F)
+# change r values to contributions for significant connections - the contributions are very small values, hence the x10000 for visualization
+# divided by 12 to limit the range between 0 and 1 for plot alpha - check range()
+rs_conn_LV3[rs_conn_LV3$rois %in% names(which(rs_plsc_boot_regress$bootRatiosSignificant.i[,3] == TRUE)), "r"] <- 10000*(Cx_conn[rownames(Cx_conn) %in% names(which(rs_plsc_boot_regress$bootRatiosSignificant.i[,3] == TRUE)),1])/12
+# make all other connections 0
+rs_conn_LV3[!(rs_conn_LV3$rois %in% names(which(rs_plsc_boot_regress$bootRatiosSignificant.i[,3] == TRUE))), "r"] <- 0
+# visualize LV3 conn results
+# convert to tbl_graph tidygraph object and add other node info - filter out non-sig nodes
+# added the numbers to neg and pos to change colour order # net_order_ColeAnt includes network number
+tg_rs_conn_LV3_neg <- as_tbl_graph(rs_conn_LV3[,2:4], directed=F) %>% activate(nodes) %>%
+  mutate(roi=rois$name, lobe=as.factor(rois$lobe), Network=as.factor(rois$net_ColeNum),
+         hemi=as.factor(rois$hemi), region=as.factor(rois$region)) %>%   # could change to area if update
+  activate(edges) %>% mutate(val = case_when(r>0 ~ "pos", r<0 ~ "neg", r==0 ~ "ns"), r=abs(r)*rs_cor_str$r) %>%
+  filter(val != "ns") %>% filter(val != "pos")
+
+# swirly circular plot
+ggraph(tg_rs_conn_LV3_neg, layout="linear", circular=T, sort.by=Network) +
+  geom_edge_arc(aes(colour=r, width = abs(r)),alpha=.8) + scale_edge_color_steps2(low = ("firebrick1"), mid = ("white"), high = ("cyan3"))+
+  geom_node_point(aes(colour=Network), size=5) +
+  scale_colour_manual(values=c("blue","slateblue2","cyan1",
+                               "magenta4","green","cadetblue","yellow","hotpink1","red","lightsalmon3","darkorange","palegreen4","black")) +
+  scale_edge_width_continuous(range = c(0,1)) +
+  theme_minimal() +
+  theme(panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank())
+```
+
+```{r fig.height=4, fig.width=5}
+
+# visualize LV3 conn results
+# convert to tbl_graph tidygraph object and add other node info - filter out non-sig nodes
+# added the numbers to neg and pos to change colour order # net_order_ColeAnt includes network number
+tg_rs_conn_LV3_pos <- as_tbl_graph(rs_conn_LV3[,2:4], directed=F) %>% activate(nodes) %>%
+  mutate(roi=rois$name, lobe=as.factor(rois$lobe), Network=as.factor(rois$net_ColeNum),
+         hemi=as.factor(rois$hemi), region=as.factor(rois$region)) %>%  
+  activate(edges) %>% mutate(val = case_when(r>0 ~ "pos", r<0 ~ "neg", r==0 ~ "ns"), r=abs(r)*rs_cor_str$r) %>%
+  filter(val != "ns") %>% filter(val != "neg")
+
+# swirly circular plot
+ggraph(tg_rs_conn_LV3_pos, layout="linear", circular=T, sort.by=Network) +
+  geom_edge_arc(aes(colour=r, width = abs(r)),alpha=0.8) + scale_edge_color_steps2(low = "red", mid = "white", high = "cyan3",midpoint = 0)+
+  geom_node_point(aes(colour=Network), size=5) +
+  scale_colour_manual(values=c("blue","slateblue2","cyan1",
+                               "magenta4","green","cadetblue","yellow","hotpink1","red","lightsalmon3","darkorange","palegreen4","black"))+
+  scale_edge_width_continuous(range = c(0,1)) +
+  theme_minimal() +
+  theme(panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank())
+```
+
+Important Brain Connection contributors for LV2
+original connections valence weighted by contributions
+```{r fig.height=4, fig.width=5}
+# visualize LV2 conn results
+# Generate matrices with contribution values for sig contributors for LV2
+rs_conn_LV2 <- unite(rs_cor_str, col="rois", 1:2, sep=".", remove=F)
+# change r values to contributions for significant connections - the contributions are very small values, hence the x10000 for visualization
+# divided by 12 to limit the range between 0 and 1 for plot alpha - check range()
+rs_conn_LV2[rs_conn_LV2$rois %in% names(which(rs_plsc_boot_regress$bootRatiosSignificant.i[,2] == TRUE)), "r"] <- 10000*(Cx_conn[rownames(Cx_conn) %in% names(which(rs_plsc_boot_regress$bootRatiosSignificant.i[,2] == TRUE)),1])/12
+# make all other connections 0
+rs_conn_LV2[!(rs_conn_LV2$rois %in% names(which(rs_plsc_boot_regress$bootRatiosSignificant.i[,2] == TRUE))), "r"] <- 0
+
+# convert to tbl_graph tidygraph object and add other node info - filter out non-sig nodes
+# added the numbers to neg and pos to change colour order # net_order_ColeAnt includes network number
+tg_rs_conn_LV2_neg <- as_tbl_graph(rs_conn_LV2[,2:4], directed=F) %>% activate(nodes) %>%
+  mutate(roi=rois$name, lobe=as.factor(rois$lobe), Network=as.factor(rois$net_ColeNum),
+         hemi=as.factor(rois$hemi), region=as.factor(rois$region)) %>%   # could change to area if update
+  activate(edges) %>% mutate(val = case_when(r>0 ~ "pos", r<0 ~ "neg", r==0 ~ "ns"), r=abs(r)*rs_cor_str$r) %>%
+  filter(val != "ns") %>% filter(val != "pos")
+
+# swirly circular plot
+ggraph(tg_rs_conn_LV2_neg, layout="linear", circular=T, sort.by=Network) +
+  geom_edge_arc(aes(colour=r, width = abs(r)),alpha=.8) + scale_edge_color_steps2(low = ("firebrick1"), mid = ("white"), high = ("cyan3"))+
+  geom_node_point(aes(colour=Network), size=5) +
+  scale_colour_manual(values=c("blue","slateblue2","cyan1",
+                               "magenta4","green","cadetblue","yellow","hotpink1","red","lightsalmon3","darkorange","palegreen4","black"))+
+  scale_edge_width_continuous(range = c(0,1)) +
+  theme_minimal() +
+  theme(panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank())
+```
+
+```{r fig.height=4, fig.width=5}
+# visualize LV2 conn results
+# convert to tbl_graph tidygraph object and add other node info - filter out non-sig nodes
+# added the numbers to neg and pos to change colour order # net_order_ColeAnt includes network number
+tg_rs_conn_LV2_pos <- as_tbl_graph(rs_conn_LV2[,2:4], directed=F) %>% activate(nodes) %>%
+  mutate(roi=rois$name, lobe=as.factor(rois$lobe), Network=as.factor(rois$net_ColeNum),
+         hemi=as.factor(rois$hemi), region=as.factor(rois$region)) %>%   # could change to area if update
+  activate(edges) %>% mutate(val = case_when(r>0 ~ "pos", r<0 ~ "neg", r==0 ~ "ns"), r=abs(r)*rs_cor_str$r) %>%
+  filter(val != "ns") %>% filter(val != "neg")
+
+# swirly circular plot
+ggraph(tg_rs_conn_LV2_pos, layout="linear", circular=T, sort.by=Network) +
+  geom_edge_arc(aes(colour=r, width = abs(r)),alpha=.8) + scale_edge_color_steps2(low = ("firebrick1"), mid = ("white"), high = ("cyan3"))+
+  geom_node_point(aes(colour=Network), size=5) +
+  scale_colour_manual(values=c("blue","slateblue2","cyan1",
+                               "magenta4","green","cadetblue","yellow","hotpink1","red","lightsalmon3","darkorange","palegreen4","black"))+
+  scale_edge_width_continuous(range = c(0,1)) +
+  theme_minimal() +
+  theme(panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank())
+```
+
+Important Brain Connection contributors for LV1
+original connections valence weighted by contributions
+```{r fig.height=4, fig.width=5}
+# visualize LV1 conn results
+rs_conn_LV1 <- unite(rs_cor_str, col="rois", 1:2, sep=".", remove=F)
+# change r values to contributions for significant connections - the contributions are very small values, hence the x10000 for visualization
+# divided by 12 to limit the range between 0 and 1 for plot alpha - check range()
+rs_conn_LV1[rs_conn_LV1$rois %in% names(which(rs_plsc_boot_regress$bootRatiosSignificant.i[,1] == TRUE)), "r"] <- 10000*(Cx_conn[rownames(Cx_conn) %in% names(which(rs_plsc_boot_regress$bootRatiosSignificant.i[,1] == TRUE)),1])/12
+# make all other connections 0
+rs_conn_LV1[!(rs_conn_LV1$rois %in% names(which(rs_plsc_boot_regress$bootRatiosSignificant.i[,1] == TRUE))), "r"] <- 0
+
+
+# convert to tbl_graph tidygraph object and add other node info - filter out non-sig nodes
+# added the numbers to neg and pos to change colour order # net_order_ColeAnt includes network number
+tg_rs_conn_LV1_pos <- as_tbl_graph(rs_conn_LV1[,2:4], directed=F) %>% activate(nodes) %>%
+  mutate(roi=rois$name, lobe=as.factor(rois$lobe), Network=as.factor(rois$net_ColeNum),
+         hemi=as.factor(rois$hemi), region=as.factor(rois$region)) %>%   # could change to area if update
+  activate(edges) %>% mutate(val = case_when(r>0 ~ "pos", r<0 ~ "neg", r==0 ~ "ns"), r=abs(r)*rs_cor_str$r) %>%
+  filter(val != "ns") %>% filter(val != "neg")
+
+# swirly circular plot
+ggraph(tg_rs_conn_LV1_pos, layout="linear", circular=T, sort.by=Network) +
+  geom_edge_arc(aes(colour=r, width = abs(r)),alpha=.8) + scale_edge_color_steps2(low = ("firebrick1"), mid = ("white"), high = ("cyan3"))+
+  geom_node_point(aes(colour=Network), size=5) +
+  scale_colour_manual(values=c("blue","slateblue2","cyan1",
+                               "magenta4","green","cadetblue","yellow","hotpink1","red","lightsalmon3","darkorange","palegreen4","black"))+
+  scale_edge_width_continuous(range = c(0,1)) +
+  theme_minimal() +
+  theme(panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank())
+```
+
+```{r fig.height=4, fig.width=5}
+# visualize LV1 conn results
+tg_rs_conn_LV1_neg <- as_tbl_graph(rs_conn_LV1[,2:4], directed=F) %>% activate(nodes) %>%
+  mutate(roi=rois$name, lobe=as.factor(rois$lobe), Network=as.factor(rois$net_ColeNum),
+         hemi=as.factor(rois$hemi), region=as.factor(rois$region)) %>%   # could change to area if update
+  activate(edges) %>% mutate(val = case_when(r>0 ~ "pos", r<0 ~ "neg", r==0 ~ "ns"), r=abs(r)*rs_cor_str$r) %>%
+  filter(val != "ns") %>% filter(val != "pos")
+
+# swirly circular plot
+ggraph(tg_rs_conn_LV1_neg, layout="linear", circular=T, sort.by=Network) +
+  geom_edge_arc(aes(colour=r, width = abs(r)),alpha=.8) + scale_edge_color_steps2(low = ("firebrick1"), mid = ("white"), high = ("cyan3"))+
+  geom_node_point(aes(colour=Network), size=5) +
+  scale_colour_manual(values=c("blue","slateblue2","cyan1",
+                               "magenta4","green","cadetblue","yellow","hotpink1","red","lightsalmon3","darkorange","palegreen4","black"))+
+  scale_edge_width_continuous(range = c(0,1)) +
+  theme_minimal() +
+  theme(panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank())
+```
+
+BRAIN PLOTS
+LV1
+```{r fig.height=1.5, fig.width=1.25}
+lv1_pos_loadings = rs_conn_LV1[order(-rs_conn_LV1$r),]
+top_10_lv1 = lv1_pos_loadings[1:10,]
+roi_x <- top_10_lv1$x
+
+roi_lv1_pos = data.frame()
+for (roi in roi_x){
+  roi_lv1_pos = rbind(roi_lv1_pos,rois[rois$ROI == roi,])
+}
+
+roi_y <- top_10_lv1$y
+
+for (roi in roi_y){
+  roi_lv1_pos = rbind(roi_lv1_pos,rois[rois$ROI == roi,])
+}
+
+brainconn(atlas =roi_lv1_pos, conmat=conmat_test, node.size = 3, view="top") + geom_node_point(aes(colour = roi_lv1_pos$network), size = 4) + scale_colour_manual(values=c("magenta4","red","green","yellow","cadetblue","slateblue2"))
+ 
+#scatterplot R_31a_ROI-L_31pd_ROI
+con_lv1_pos <- cbind(X_non0[,"R_31a_ROI-L_31pd_ROI"], data_Y_non0_fa$MR1)
+con_lv1_pos <- as.data.frame(con_lv1_pos)
+colnames(con_lv1_pos) <-c('R_31a_ROI__L_31pd_ROI','Factor1')
+plot_con_lv1_pos <- ggplot(con_lv1_pos,aes(y=R_31a_ROI__L_31pd_ROI,x=Factor1,))+geom_point()+stat_smooth(method="lm",se=TRUE) +xlab('General Depression Factor')+ ylab('Connectivity') +theme_bw() +  theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12))
+plot_con_lv1_pos
+cor(con_lv1_pos)
+
+```
+
+```{r fig.height=1.5, fig.width=1.25}
+lv1_neg_loadings = rs_conn_LV1[order(rs_conn_LV1$r),]
+top_10_neg_lv1 = lv1_neg_loadings[1:10,]
+roi_x_neg <- top_10_neg_lv1$x
+
+roi_lv1_neg = data.frame()
+for (roi in roi_x_neg){
+  roi_lv1_neg = rbind(roi_lv1_neg,rois[rois$ROI == roi,])
+}
+
+roi_y_neg <- top_10_neg_lv1$y
+
+for (roi in roi_y_neg){
+  roi_lv1_neg = rbind(roi_lv1_neg,rois[rois$ROI == roi,])
+}
+
+brainconn(atlas =roi_lv1_neg, conmat=conmat_test, node.size = 3, view="top") + geom_node_point(aes(colour = roi_lv1_neg$network), size = 4) + scale_colour_manual(values=c("magenta4","red","yellow","cadetblue","lightsalmon3","slateblue2"))
+
+#scatterplot R_LO2_ROI-R_V3CD_ROI
+con_lv1_neg <- cbind(X_non0[,"R_LO2_ROI-R_V3CD_ROI"], data_Y_non0_fa$MR1)
+con_lv1_neg <- as.data.frame(con_lv1_neg)
+colnames(con_lv1_neg) <-c('R_LO2_ROI__R_V3CD_ROI','Factor1')
+plot_con_lv1_neg <- ggplot(con_lv1_neg,aes(y=R_LO2_ROI__R_V3CD_ROI,x=Factor1,))+geom_point()+stat_smooth(method="lm",se=TRUE) +xlab('General Depression Factor')+ ylab('Connectivity') +theme_bw() +  theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12))
+plot_con_lv1_neg
+cor(con_lv1_neg)
+```
+
+LV2
+```{r fig.height=1.5, fig.width=1.25}
+lv2_pos_loadings = rs_conn_LV2[order(-rs_conn_LV2$r),]
+top_10_lv2 = lv2_pos_loadings[1:10,]
+roi_2x <- top_10_lv2$x
+
+roi_lv2_pos = data.frame()
+for (roi in roi_2x){
+  roi_lv2_pos = rbind(roi_lv2_pos,rois[rois$ROI == roi,])
+}
+
+roi_2y <- top_10_lv2$y
+
+for (roi in roi_2y){
+  roi_lv2_pos = rbind(roi_lv2_pos,rois[rois$ROI == roi,])
+}
+
+brainconn(atlas =roi_lv2_pos, conmat=conmat_test, node.size = 3, view="top", labels = TRUE) + geom_node_point(aes(colour = roi_lv2_pos$network), size = 4) + scale_colour_manual(values=c("magenta4","red","yellow","cadetblue","cyan3","blue" ,"slateblue2"))
+
+#scatterplot R_31pv_ROI-R_9.46d_ROI
+con_lv2_pos <- cbind(X_non0[,"R_31pv_ROI-R_9.46d_ROI"], Y_non0$sans_sub_asocial_anhedonia)
+con_lv2_pos <- as.data.frame(con_lv2_pos)
+colnames(con_lv2_pos) <-c('R_31pv_ROI__R_9.46d_ROI','SANS_Anhedonia')
+plot_con_lv2_pos <- ggplot(con_lv2_pos,aes(y=R_31pv_ROI__R_9.46d_ROI,x=SANS_Anhedonia,))+geom_point()+stat_smooth(method="lm",se=TRUE) +xlab('SANS Anhedonia')+ ylab('Connectivity') +theme_bw() +  theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12))
+plot_con_lv2_pos
+cor(con_lv2_pos)
+```
+
+```{r fig.height=1.5, fig.width=1.25}
+lv2_neg_loadings = rs_conn_LV2[order(rs_conn_LV2$r),]
+top_10_lv2_neg = lv2_neg_loadings[1:10,]
+roi_2_negx <- top_10_lv2_neg$x
+
+roi_lv2_neg = data.frame()
+for (roi in roi_2_negx){
+  roi_lv2_neg = rbind(roi_lv2_neg,rois[rois$ROI == roi,])
+}
+
+roi_2_negy <- top_10_lv2_neg$y
+
+for (roi in roi_2_negy){
+  roi_lv2_neg = rbind(roi_lv2_neg,rois[rois$ROI == roi,])
+}
+
+brainconn(atlas =roi_lv2_neg, conmat=conmat_test, node.size = 3, view="top") + geom_node_point(aes(colour = roi_lv2_neg$network), size = 4) + scale_colour_manual(values=c("magenta4","green","cyan3","darkorange","slateblue2"))
+ 
+#scatterplot R_p32pr_ROI-L_4_ROI
+con_lv2_neg <- cbind(X_non0[,"R_p32pr_ROI-L_4_ROI"], Y_non0$sans_sub_asocial_anhedonia)
+con_lv2_neg <- as.data.frame(con_lv2_neg)
+colnames(con_lv2_neg) <-c('R_p32pr_ROI__L_4_ROI','SANS_Anhedonia')
+plot_con_lv2_neg <- ggplot(con_lv2_neg,aes(y=R_p32pr_ROI__L_4_ROI,x=SANS_Anhedonia,))+geom_point()+stat_smooth(method="lm",se=TRUE) +xlab('SANS Anhedonia')+ ylab('Connectivity') +theme_bw() +  theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12))
+plot_con_lv2_neg
+cor(con_lv2_neg)
+```
+
+LV3
+```{r fig.height=1.5, fig.width=1.25}
+lv3_pos_loadings = rs_conn_LV3[order(-rs_conn_LV3$r),]
+top_10_lv3 = lv3_pos_loadings[1:10,]
+roi_3x <- top_10_lv3$x
+
+roi_lv3_pos = data.frame()
+for (roi in roi_3x){
+  roi_lv3_pos = rbind(roi_lv3_pos,rois[rois$ROI == roi,])
+}
+
+roi_3y <- top_10_lv3$y
+
+for (roi in roi_3y){
+  roi_lv3_pos = rbind(roi_lv3_pos,rois[rois$ROI == roi,])
+}
+
+brainconn(atlas =roi_lv3_pos, conmat=conmat_test, node.size = 3, view="top", labels = TRUE) + geom_node_point(aes(colour = roi_lv3_pos$network), size = 4) + scale_colour_manual(values=c("magenta4","red","yellow","cadetblue","cyan3","slateblue2"))
+
+#scatterplot R_46_ROI-L_9p_ROI
+con_lv3_pos <- cbind(X_non0[,"R_46_ROI-L_9p_ROI"], data_Y_non0_fa$MR2)
+con_lv3_pos <- as.data.frame(con_lv3_pos)
+colnames(con_lv3_pos) <-c('R_46_ROI__L_9p_ROI','Factor2')
+plot_con_lv3_pos <- ggplot(con_lv3_pos,aes(y=R_46_ROI__L_9p_ROI,x=Factor2,))+geom_point()+stat_smooth(method="lm",se=TRUE) +xlab('Guilt Factor')+ ylab('Connectivity') +theme_bw() +  theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12))
+plot_con_lv3_pos
+cor(con_lv3_pos)
+```
+```{r fig.height=1.5, fig.width=1.25}
+lv3_neg_loadings = rs_conn_LV3[order(rs_conn_LV3$r),]
+top_10_lv3_neg = lv3_neg_loadings[1:10,]
+roi_3_negx <- top_10_lv3_neg$x
+
+roi_lv3_neg = data.frame()
+for (roi in roi_3_negx){
+  roi_lv3_neg = rbind(roi_lv3_neg,rois[rois$ROI == roi,])
+}
+
+roi_3_negy <- top_10_lv3_neg$y
+
+for (roi in roi_3_negy){
+  roi_lv3_neg = rbind(roi_lv3_neg,rois[rois$ROI == roi,])
+}
+
+brainconn(atlas =roi_lv3_neg, conmat=conmat_test, node.size = 4, view="top") + geom_node_point(aes(colour = roi_lv3_neg$network), size = 4) + scale_colour_manual(values=c("hotpink1","magenta4","yellow","cyan3","black","slateblue2"))
+
+#scatterplot 
+con_lv3_neg <- cbind(X_non0[,"THA.VA.rh-R_24dv_ROI"], data_Y_non0_fa$MR2)
+con_lv3_neg <- as.data.frame(con_lv3_neg)
+colnames(con_lv3_neg) <-c('THA.VA.rh__R_24dv_ROI','Factor2')
+plot_con_lv3_neg <- ggplot(con_lv3_neg,aes(y=THA.VA.rh__R_24dv_ROI,x=Factor2,))+geom_point()+stat_smooth(method="lm",se=TRUE) +xlab('Guilt Factor')+ ylab('Connectivity') +theme_bw() +  theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12))
+plot_con_lv3_neg
+cor(con_lv3_neg)
+```
+
+Individual weights ROI Glasser LV1 
+```{r}
+
+lv1_neg = rs_conn_LV1[(rs_conn_LV1$r < 0 ),]
+
+lv1_pos = rs_conn_LV1[(rs_conn_LV1$r > 0 ),]
+
+pos_rois = unique(lv1_pos$x)
+pos_rois = append(pos_rois, unique(lv1_pos$y))
+pos_rois = unique(pos_rois)
+
+df_sum_lv1 = data.frame(matrix(ncol = 2))
+for (r in pos_rois){
+  df_roi = data.frame() #create empty dataframe
+  df_roi = rbind(df_roi, lv1_pos[grep(r, lv1_pos$rois), ]) #grab all connections with roi
+  sum_roi = sum(df_roi$r) #calculate the mean weight for that roi
+  df_sum_lv1= rbind(df_sum_lv1, c(r, sum_roi)) #bind it to dataframe with roi name
+}
+df_sum_lv1 = df_sum_lv1 %>%
+  filter(!row_number() %in% 1)
+colnames(df_sum_lv1) <- c("ROI","weight")
+
+
+sum_pos_loadings_weight <- merge(x = df_sum_lv1, y = rois, by= "ROI", all = TRUE)
+
+#######neg
+neg_rois = unique(lv1_neg$x)
+neg_rois = append(neg_rois, unique(lv1_neg$y))
+neg_rois = unique(neg_rois)
+
+
+df_neg_sum_lv1 = data.frame(matrix(ncol = 2))
+for (r in neg_rois){
+  df_roi = data.frame() #create empty dataframe
+  df_roi = rbind(df_roi, lv1_neg[grep(r, lv1_neg$rois), ]) #grab all connections with roi
+  sum_roi = sum(df_roi$r) #calculate the mean weight for that roi
+  df_neg_sum_lv1 = rbind(df_neg_sum_lv1, c(r, sum_roi)) #bind it to dataframe with roi name
+}
+df_neg_sum_lv1 = df_neg_sum_lv1 %>%
+  filter(!row_number() %in% 1)
+
+
+colnames(df_neg_sum_lv1) <- c("ROI","weight")
+sum_neg_loadings_weight <- merge(x = df_neg_sum_lv1, y = rois, by= "ROI", all = TRUE)
+```
+
+
+Individual weights ROI Glasser LV2
+```{r}
+
+lv2_neg = rs_conn_LV2[(rs_conn_LV2$r < 0 ),]
+lv2_pos = rs_conn_LV2[(rs_conn_LV2$r > 0 ),]
+
+pos_lv2_rois = unique(lv2_pos$x)
+pos_lv2_rois = append(pos_lv2_rois, unique(lv2_pos$y))
+pos_lv2_rois = unique(pos_lv2_rois)
+
+df_pos_sum_lv2 = data.frame(matrix(ncol = 2))
+for (r in pos_lv2_rois){
+  df_roi = data.frame() #create empty dataframe
+  df_roi = rbind(df_roi, lv2_pos[grep(r, lv2_pos$rois), ]) #grab all connections with roi
+  sum_roi = sum(df_roi$r) #calculate the sum weight for that roi
+  df_pos_sum_lv2 = rbind(df_pos_sum_lv2, c(r, sum_roi)) #bind it to dataframe with roi name
+}
+df_pos_sum_lv2 = df_pos_sum_lv2 %>%
+  filter(!row_number() %in% 1)
+
+colnames(df_pos_sum_lv2) <- c("ROI","weight")
+
+sum_pos_loadings_weight_lv2 <- merge(x = df_pos_sum_lv2, y = rois, by= "ROI", all=TRUE)
+
+#######neg
+neg_lv2_rois = unique(lv2_neg$x)
+neg_lv2_rois = append(neg_lv2_rois, unique(lv2_neg$y))
+neg_lv2_rois = unique(neg_lv2_rois)
+
+
+df_neg_sum_lv2 = data.frame(matrix(ncol = 2))
+for (r in neg_lv2_rois){
+  df_roi = data.frame() #create empty dataframe
+  df_roi = rbind(df_roi, lv2_neg[grep(r, lv2_neg$rois), ]) #grab all connections with roi
+  sum_roi = sum(df_roi$r) #calculate the sum weight for that roi
+  df_neg_sum_lv2 = rbind(df_neg_sum_lv2, c(r, sum_roi)) #bind it to dataframe with roi name
+}
+df_neg_sum_lv2 = df_neg_sum_lv2 %>%
+  filter(!row_number() %in% 1)
+
+colnames(df_neg_sum_lv2) <- c("ROI","weight")
+
+sum_neg_loadings_weight_lv2 <- merge(x = df_neg_sum_lv2, y = rois, by= "ROI", all=TRUE)
+
+```
+
+Individual weights ROI Glasser LV3
+```{r}
+lv3_neg = rs_conn_LV3[(rs_conn_LV3$r < 0 ),]
+
+lv3_pos = rs_conn_LV3[(rs_conn_LV3$r > 0 ),]
+
+pos_lv3_rois = unique(lv3_pos$x)
+pos_lv3_rois = append(pos_lv3_rois, unique(lv3_pos$y))
+pos_lv3_rois = unique(pos_lv3_rois)
+
+df_pos_sum_lv3 = data.frame(matrix(ncol = 2))
+for (r in pos_lv3_rois){
+  df_roi = data.frame() #create empty dataframe
+  df_roi = rbind(df_roi, lv3_pos[grep(r, lv3_pos$rois), ]) #grab all connections with roi
+  sum_roi = sum(df_roi$r) #calculate the mean weight for that roi
+  df_pos_sum_lv3 = rbind(df_pos_sum_lv3, c(r, sum_roi)) #bind it to dataframe with roi name
+}
+df_pos_sum_lv3 = df_pos_sum_lv3 %>%
+  filter(!row_number() %in% 1)
+
+colnames(df_pos_sum_lv3) <- c("ROI","weight")
+
+sum_pos_loadings_weight_lv3 <- merge(x = df_pos_sum_lv3, y = rois, by= "ROI", all=TRUE)
+
+#######neg
+neg_lv3_rois = unique(lv3_neg$x)
+neg_lv3_rois = append(neg_lv3_rois, unique(lv3_neg$y))
+neg_lv3_rois = unique(neg_lv3_rois)
+
+
+df_neg_sum_lv3 = data.frame(matrix(ncol = 2))
+for (r in neg_lv3_rois){
+  df_roi = data.frame() #create empty dataframe
+  df_roi = rbind(df_roi, lv3_neg[grep(r, lv3_neg$rois), ]) #grab all connections with roi
+  sum_roi = sum(df_roi$r) #calculate the mean weight for that roi
+  df_neg_sum_lv3 = rbind(df_neg_sum_lv3, c(r, sum_roi)) #bind it to dataframe with roi name
+}
+df_neg_sum_lv3 = df_neg_sum_lv3 %>%
+  filter(!row_number() %in% 1)
+
+colnames(df_neg_sum_lv3) <- c("ROI","weight")
+
+sum_neg_loadings_weight_lv3 <- merge(x = df_neg_sum_lv3, y = rois, by= "ROI", all=TRUE)
+
+
+```
+
+Network weights ROI Glasser LV1 
+```{r fig.height=3, fig.width=3}
+Loadings_LV1 = rs_conn_LV1[(rs_conn_LV1$r != 0 ),]
+
+Loadings_LV1_neg = Loadings_LV1[Loadings_LV1$r < 0,]
+Loadings_LV1_pos = Loadings_LV1[Loadings_LV1$r > 0,]
+
+
+
+lv1_neg_networks = unique(Loadings_LV1_neg$x_y_network)
+lv1_pos_networks = unique(Loadings_LV1_pos$x_y_network)
+
+c_df_neg = data.frame(matrix(ncol = 2))
+colnames(c_df_neg) = c("network", "sum_net")
+for (network in lv1_neg_networks){
+  sum_net = sum(Loadings_LV1_neg[Loadings_LV1_neg$x_y_network == network,]$r)
+  c_df_neg= rbind(c_df_neg, c(network,sum_net))
+}
+
+c_df_pos = data.frame(matrix(ncol = 2))
+colnames(c_df_pos) = c("network", "sum_net")
+for (network in lv1_pos_networks){
+  sum_net = sum(Loadings_LV1_pos[Loadings_LV1_pos$x_y_network == network,]$r)
+  c_df_pos= rbind(c_df_pos, c(network,sum_net))
+}
+
+Positive_Network_Loadings_LV1 <- replace(Positive_Network_Loadings_LV1, is.na(Positive_Network_Loadings_LV1), 0)
+Positive_Network_Loadings_LV1<- Positive_Network_Loadings_LV1[,-1]
+rownames(Positive_Network_Loadings_LV1) <- colnames(Positive_Network_Loadings_LV1)
+Positive_Network_Loadings_LV1 <- as.matrix(Positive_Network_Loadings_LV1)
+
+pheatmap(Positive_Network_Loadings_LV1, cluster_rows = F, cluster_cols = F , border_color = "black", color = hcl.colors(5, "Blues 3", rev = TRUE), fontsize = 30, legend = T)
+
+
+Negative_Network_Loadings_LV1 <- replace(Negative_Network_Loadings_LV1, is.na(Negative_Network_Loadings_LV1), 0)
+Negative_Network_Loadings_LV1<- Negative_Network_Loadings_LV1[,-1]
+rownames(Negative_Network_Loadings_LV1) <- colnames(Negative_Network_Loadings_LV1)
+Negative_Network_Loadings_LV1 <- as.matrix(Negative_Network_Loadings_LV1)
+
+pheatmap(Negative_Network_Loadings_LV1, cluster_rows = F, cluster_cols = F , border_color = "black", color = hcl.colors(5, "Reds 3", rev = FALSE), fontsize = 30, legend = T)
+
+```
+
+Network weights ROI Glasser LV2 
+```{r fig.height=3, fig.width=3}
+Loadings_LV2 = rs_conn_LV2[(rs_conn_LV2$r != 0 ),]
+for (y in Loadings_LV2$y){
+  cat(rois[Glasser_Tian_roi_info$atlas_roi == y,]$net_ColeAnt, '\n')
+}
+
+
+
+Loadings_LV2_neg = Loadings_LV2[Loadings_LV2$r < 0,]
+Loadings_LV2_pos = Loadings_LV2[Loadings_LV2$r > 0,]
+
+
+
+lv2_neg_networks = unique(Loadings_LV2_neg$x_y_network)
+lv2_pos_networks = unique(Loadings_LV2_pos$x_y_network)
+
+clv2_df_neg = data.frame(matrix(ncol = 2))
+colnames(clv2_df_neg) = c("network", "sum_net")
+for (network in lv2_neg_networks){
+  sum_net = sum(Loadings_LV2_neg[Loadings_LV2_neg$x_y_network == network,]$r)
+  clv2_df_neg= rbind(clv2_df_neg, c(network,sum_net))
+}
+
+clv2_df_pos = data.frame(matrix(ncol = 2))
+colnames(clv2_df_pos) = c("network", "sum_net")
+for (network in lv2_pos_networks){
+  sum_net = sum(Loadings_LV2_pos[Loadings_LV2_pos$x_y_network == network,]$r)
+  clv2_df_pos= rbind(clv2_df_pos, c(network,sum_net))
+}
+
+Positive_Network_Loadings_LV2 <- replace(Positive_Network_Loadings_LV2, is.na(Positive_Network_Loadings_LV2), 0)
+Positive_Network_Loadings_LV2<- Positive_Network_Loadings_LV2[,-1]
+rownames(Positive_Network_Loadings_LV2) <- colnames(Positive_Network_Loadings_LV2)
+Positive_Network_Loadings_LV2 <- as.matrix(Positive_Network_Loadings_LV2)
+
+pheatmap(Positive_Network_Loadings_LV2, cluster_rows = F, cluster_cols = F , border_color = "black", color = hcl.colors(5, "Blues 3", rev = TRUE), fontsize = 30, legend = T)
+
+
+Negative_Network_Loadings_LV2 <- replace(Negative_Network_Loadings_LV2, is.na(Negative_Network_Loadings_LV2), 0)
+Negative_Network_Loadings_LV2<- Negative_Network_Loadings_LV2[,-1]
+rownames(Negative_Network_Loadings_LV2) <- colnames(Negative_Network_Loadings_LV2)
+Negative_Network_Loadings_LV2 <- as.matrix(Negative_Network_Loadings_LV2)
+
+pheatmap(Negative_Network_Loadings_LV2, cluster_rows = F, cluster_cols = F , border_color = "black", color = hcl.colors(5, "Reds 3", rev = FALSE), fontsize = 30, legend = T)
+
+```
+
+
+Network weights ROI Glasser LV3 
+```{r fig.height=3, fig.width=3}
+Loadings_LV3 = rs_conn_LV3[(rs_conn_LV3$r != 0 ),]
+for (y in Loadings_LV3$y){
+  cat(rois[Glasser_Tian_roi_info$atlas_roi == y,]$net_ColeAnt, '\n')
+}
+
+
+
+Loadings_LV3_neg = Loadings_LV3[Loadings_LV3$r < 0,]
+Loadings_LV3_pos = Loadings_LV3[Loadings_LV3$r > 0,]
+
+
+
+lv3_neg_networks = unique(Loadings_LV3_neg$x_y_network)
+lv3_pos_networks = unique(Loadings_LV3_pos$x_y_network)
+
+clv3_df_neg = data.frame(matrix(ncol = 2))
+colnames(clv3_df_neg) = c("network", "sum_net")
+for (network in lv3_neg_networks){
+  sum_net = sum(Loadings_LV3_neg[Loadings_LV3_neg$x_y_network == network,]$r)
+  clv3_df_neg= rbind(clv3_df_neg, c(network,sum_net))
+}
+
+clv3_df_pos = data.frame(matrix(ncol = 2))
+colnames(clv3_df_pos) = c("network", "sum_net")
+for (network in lv3_pos_networks){
+  sum_net = sum(Loadings_LV3_pos[Loadings_LV3_pos$x_y_network == network,]$r)
+  clv3_df_pos= rbind(clv3_df_pos, c(network,sum_net))
+}
+
+##
+Positive_Network_Loadings_LV3 <- replace(Positive_Network_Loadings_LV3, is.na(Positive_Network_Loadings_LV3), 0)
+Positive_Network_Loadings_LV3<- Positive_Network_Loadings_LV3[,-1]
+rownames(Positive_Network_Loadings_LV3) <- colnames(Positive_Network_Loadings_LV3)
+Positive_Network_Loadings_LV3 <- as.matrix(Positive_Network_Loadings_LV3)
+
+pheatmap(Positive_Network_Loadings_LV3, cluster_rows = F, cluster_cols = F , border_color = "black", color = hcl.colors(5, "Blues 3", rev = TRUE), fontsize = 30, legend = T)
+
+
+Negative_Network_Loadings_LV3 <- replace(Negative_Network_Loadings_LV3, is.na(Negative_Network_Loadings_LV3), 0)
+Negative_Network_Loadings_LV3<- Negative_Network_Loadings_LV3[,-1]
+rownames(Negative_Network_Loadings_LV3) <- colnames(Negative_Network_Loadings_LV3)
+Negative_Network_Loadings_LV3 <- as.matrix(Negative_Network_Loadings_LV3)
+
+pheatmap(Negative_Network_Loadings_LV3, cluster_rows = F, cluster_cols = F , border_color = "black", color = hcl.colors(5, "Reds 3", rev = FALSE), fontsize = 30, legend = T)
+
+```
+
+
+
