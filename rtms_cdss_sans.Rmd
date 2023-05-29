@@ -19,16 +19,32 @@ colnames(cdss_prepost) <- c("CDSS 1 pre", "CDSS 2 pre","CDSS 3 pre", "CDSS 4 pre
 
 
 ####active
-cdss_5_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 5 pre',]
-cdss_5_prepost = rbind(cdss_5_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 5 post',])
-cdss_5 <- ggplot(data = cdss_5_prepost, aes(x = variable, y = value, group = ID))
-cdss_5   + 
+cdss_1_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 1 pre',]
+cdss_1_prepost = rbind(cdss_1_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 1 post',])
+cdss_1 <- ggplot(data = cdss_1_prepost, aes(x = variable, y = value, group = ID))
+cdss_1  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
     stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="blue", size=2 , fill = "grey", alpha = 0.6) +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
-    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 5 Pathological Guilt" ) +ylim(0,3)
-
-
+    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 1 Depression" ) +ylim(0,3)
+    
+cdss_2_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 2 pre',]
+cdss_2_prepost = rbind(cdss_2_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 2 post',])
+cdss_2 <- ggplot(data = cdss_2_prepost, aes(x = variable, y = value, group = ID))
+cdss_2  + 
+    geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
+    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="blue", size=2 , fill = "grey", alpha = 0.6) +
+    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
+    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 2 Hopelessness" ) +ylim(0,3)
+    
+cdss_3_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 3 pre',]
+cdss_3_prepost = rbind(cdss_3_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 3 post',])
+cdss_3 <- ggplot(data = cdss_3_prepost, aes(x = variable, y = value, group = ID))
+cdss_3  + 
+    geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
+    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="blue", size=2 , fill = "grey", alpha = 0.6) +
+    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
+    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 3 Self-Depreciation" ) +ylim(0,3)
 
 cdss_melt_active
 cdss_4_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 4 pre',]
@@ -39,18 +55,15 @@ cdss_4   +
     stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="blue", size=2 , fill = "grey", alpha = 0.6) +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
     geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 4 Guilty Idea of Reference" ) +ylim(0,3)
-
-
-
-cdss_1_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 1 pre',]
-cdss_1_prepost = rbind(cdss_1_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 1 post',])
-cdss_1 <- ggplot(data = cdss_1_prepost, aes(x = variable, y = value, group = ID))
-cdss_1  + 
+  
+cdss_5_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 5 pre',]
+cdss_5_prepost = rbind(cdss_5_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 5 post',])
+cdss_5 <- ggplot(data = cdss_5_prepost, aes(x = variable, y = value, group = ID))
+cdss_5   + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
     stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="blue", size=2 , fill = "grey", alpha = 0.6) +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
-    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 1 Depression" ) +ylim(0,3)
-
+    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 5 Pathological Guilt" ) +ylim(0,3)
 
 cdss_6_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 6 pre',]
 cdss_6_prepost = rbind(cdss_6_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 6 post',])
@@ -61,28 +74,14 @@ cdss_6  +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
     geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 6 Morning Depression" ) +ylim(0,3)
 
-cdss_2_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 2 pre',]
-cdss_2_prepost = rbind(cdss_2_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 2 post',])
-cdss_2 <- ggplot(data = cdss_2_prepost, aes(x = variable, y = value, group = ID))
-cdss_2  + 
+cdss_7_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 7 pre',]
+cdss_7_prepost = rbind(cdss_7_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 7 post',])
+cdss_7 <- ggplot(data = cdss_7_prepost, aes(x = variable, y = value, group = ID))
+cdss_7  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
     stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="blue", size=2 , fill = "grey", alpha = 0.6) +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
-    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 2 Hopelessness" ) +ylim(0,3)
-
-
-
-cdss_3_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 3 pre',]
-cdss_3_prepost = rbind(cdss_3_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 3 post',])
-cdss_3 <- ggplot(data = cdss_3_prepost, aes(x = variable, y = value, group = ID))
-cdss_3  + 
-    geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
-    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="blue", size=2 , fill = "grey", alpha = 0.6) +
-    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
-    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 3 Self-Depreciation" ) +ylim(0,3)
-
-
-
+    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 7 Early Wakening" ) +ylim(0,3)
 
 cdss_8_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 8 pre',]
 cdss_8_prepost = rbind(cdss_8_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 8 post',])
@@ -93,15 +92,6 @@ cdss_8  +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
     geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 8 Suicide" ) +ylim(0,3)
 
-
-cdss_7_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 7 pre',]
-cdss_7_prepost = rbind(cdss_7_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 7 post',])
-cdss_7 <- ggplot(data = cdss_7_prepost, aes(x = variable, y = value, group = ID))
-cdss_7  + 
-    geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
-    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="blue", size=2 , fill = "grey", alpha = 0.6) +
-    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
-    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 7 Early Wakening" ) +ylim(0,3)
 
 wilcox.test(cdss_1_prepost$value~ cdss_1_prepost$variable, paired= TRUE, alternative = "greater")
 wilcox.test(cdss_2_prepost$value~ cdss_2_prepost$variable, paired= TRUE, alternative = "greater")
@@ -128,40 +118,6 @@ cdss_1_sham  +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
     geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 1 Depression" ) +ylim(0,3)
 
-
-
-cdss_4_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 4 pre',]
-cdss_4_prepost_sham = rbind(cdss_4_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 4 post',])
-cdss_4_sham <- ggplot(data = cdss_4_prepost_sham, aes(x = variable, y = value, group = ID))
-cdss_4_sham  + 
-    geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
-    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="orange", size=2 , fill = "grey", alpha = 0.6) +
-    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
-    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 4 Guilty Idea of Reference" ) +ylim(0,3)
-
-
-
-
-cdss_5_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 5 pre',]
-cdss_5_prepost_sham = rbind(cdss_5_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 5 post',])
-cdss_5_sham <- ggplot(data = cdss_5_prepost_sham, aes(x = variable, y = value, group = ID))
-cdss_5_sham  + 
-    geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
-    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="orange", size=2 , fill = "grey", alpha = 0.6) +
-    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
-    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 5 Pathological Guilt" ) +ylim(0,3)
-
-
-cdss_6_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 6 pre',]
-cdss_6_prepost_sham = rbind(cdss_6_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 6 post',])
-cdss_6_sham <- ggplot(data = cdss_6_prepost_sham, aes(x = variable, y = value, group = ID))
-cdss_6_sham   + 
-    geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
-    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="orange", size=2 , fill = "grey", alpha = 0.6) +
-    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
-    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 6 Morning Depression" ) +ylim(0,3)
-
-
 cdss_2_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 2 pre',]
 cdss_2_prepost_sham = rbind(cdss_2_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 2 post',])
 cdss_2_sham <- ggplot(data = cdss_2_prepost_sham, aes(x = variable, y = value, group = ID))
@@ -182,18 +138,33 @@ cdss_3_sham  +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
     geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 3 Self-Depreciation" ) +ylim(0,3)
 
-
-
-cdss_8_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 8 pre',]
-cdss_8_prepost_sham = rbind(cdss_8_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 8 post',])
-cdss_8_sham <- ggplot(data = cdss_8_prepost_sham, aes(x = variable, y = value, group = ID))
-cdss_8_sham  + 
+cdss_4_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 4 pre',]
+cdss_4_prepost_sham = rbind(cdss_4_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 4 post',])
+cdss_4_sham <- ggplot(data = cdss_4_prepost_sham, aes(x = variable, y = value, group = ID))
+cdss_4_sham  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
     stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="orange", size=2 , fill = "grey", alpha = 0.6) +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
-    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 8 Suicide" ) +ylim(0,3)
+    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 4 Guilty Idea of Reference" ) +ylim(0,3)
+
+cdss_5_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 5 pre',]
+cdss_5_prepost_sham = rbind(cdss_5_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 5 post',])
+cdss_5_sham <- ggplot(data = cdss_5_prepost_sham, aes(x = variable, y = value, group = ID))
+cdss_5_sham  + 
+    geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
+    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="orange", size=2 , fill = "grey", alpha = 0.6) +
+    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
+    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 5 Pathological Guilt" ) +ylim(0,3)
 
 
+cdss_6_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 6 pre',]
+cdss_6_prepost_sham = rbind(cdss_6_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 6 post',])
+cdss_6_sham <- ggplot(data = cdss_6_prepost_sham, aes(x = variable, y = value, group = ID))
+cdss_6_sham   + 
+    geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
+    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="orange", size=2 , fill = "grey", alpha = 0.6) +
+    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
+    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 6 Morning Depression" ) +ylim(0,3)
 
 cdss_7_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 7 pre',]
 cdss_7_prepost_sham = rbind(cdss_7_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 7 post',])
@@ -203,6 +174,15 @@ cdss_7_sham   +
     stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="orange", size=2 , fill = "grey", alpha = 0.6) +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
     geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 7 Early Wakening" ) +ylim(0,3) 
+
+cdss_8_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 8 pre',]
+cdss_8_prepost_sham = rbind(cdss_8_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 8 post',])
+cdss_8_sham <- ggplot(data = cdss_8_prepost_sham, aes(x = variable, y = value, group = ID))
+cdss_8_sham  + 
+    geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
+    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="orange", size=2 , fill = "grey", alpha = 0.6) +
+    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
+    geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 8 Suicide" ) +ylim(0,3)
 
 wilcox.test(cdss_1_prepost_sham$value~ cdss_1_prepost_sham$variable, paired= TRUE, alternative = "greater")
 wilcox.test(cdss_2_prepost_sham$value~ cdss_2_prepost_sham$variable, paired= TRUE, alternative = "greater")
