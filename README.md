@@ -1,4 +1,5 @@
-## A multivariate approach linking depressive symptoms to functional connectivity in schizophrenia spectrum disorders
+## Uncovering the Seperable Dimensions of Depression, Negative Symptoms, and Guilt in Schizophrenia Spectrum Disorders: Neural Circuitry and Clinical Implications
+
 
 Importance: Depressive symptoms in Schizophrenia Spectrum Disorders (SSDs) impact suicidality, prognosis, and quality of life. Treatment options are limited, likely due to presumed comorbidities with major depressive disorder and difficulty differentiating them from negative symptoms.
 
