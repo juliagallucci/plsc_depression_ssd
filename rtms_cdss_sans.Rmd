@@ -16,93 +16,11 @@ cdss_prepost <- cbind(cdss_fa_pre, cdss_fa_post)
 rownames(cdss_prepost) <- rtms_baseline$record_id
 cdss_prepost = na.omit(cdss_prepost)
 colnames(cdss_prepost) <- c("CDSS 1 pre", "CDSS 2 pre","CDSS 3 pre", "CDSS 4 pre","CDSS 5 pre", "CDSS 6 pre","CDSS 7 pre", "CDSS 8 pre", "CDSS 1 post", "CDSS 2 post","CDSS 3 post", "CDSS 4 post","CDSS 5 post", "CDSS 6 post","CDSS 7 post", "CDSS 8 post")
-cdss_fa_pre <- cdss_prepost[,1:8]
-cdss_fa_post <- cdss_prepost[,9:16]
-library(psych)
-library(nFactors)
-
-rtms_baseline_factor <-factor.scores(cdss_fa_pre, f.analysis_2)
-
-pre_scores <- rtms_baseline_factor$scores #extract factor scores
-
-rtms_post_factor <-factor.scores(cdss_fa_post, f.analysis_2)
-post_scores <- rtms_post_factor$scores #extract factor scores
-
-pre_post_scores <- cbind(pre_scores, post_scores)
-pre_post_scores <- as.data.frame(pre_post_scores)
-
-condition = c()
-for (sub in rownames(pre_post_scores)){
-  condition = append(condition, cdss_prepost_rtmswm[cdss_prepost_rtmswm$'...1' ==sub,]$rTMS_Cndt)
-}
-pre_post_scores$condition <- condition
-
-colnames(pre_post_scores) <- c("pre factor 1", "pre factor 2", "post factor 1", "post factor 2" , "Cndt")
-pre_post_scores
-```
 
 
-```{r fig.height=3, fig.width=2}
-active_pre_post_scores = pre_post_scores[pre_post_scores$Cndt == 'Active',]
-active_pre_post_scores$ID <- row.names(active_pre_post_scores)
-
-rtmswm_cdss_scores_melt <- melt(active_pre_post_scores[c(1:4,6)])
-
-gdf <- ggplot(data = rtmswm_cdss_scores_melt[c(1:37,75:111),], aes(x = variable, y = value, group = ID))
-gdf   + 
-    geom_line(linewidth=0.75, alpha=0.65)+
-    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="blue", size=2 , fill = "grey", alpha = 0.6) +
-    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
-    geom_point() + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("General Depressive Factor" ) +ylim(-1.5,3.2)
-
-guiltf_active <- ggplot(data = rtmswm_cdss_scores_melt[c(38:74,112:148),], aes(x = variable, y = value, group = ID))
-guiltf_active  + 
-    geom_line(linewidth=0.75, alpha=0.65)+
-    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="blue", size=2 , fill = "grey", alpha = 0.6) +
-    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
-    geom_point() + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("Guilt Factor" ) +ylim(-1.5,3.2)
-
-
-wilcox.test(active_pre_post_scores$`pre factor 1`,active_pre_post_scores$`post factor 1`, paired= TRUE, alternative = "greater")
-wilcox.test(active_pre_post_scores$`pre factor 2`,active_pre_post_scores$`post factor 2`, paired= TRUE, alternative = "greater")
-
-####sham
-sham_pre_post_scores = pre_post_scores[pre_post_scores$Cndt == 'Sham',]
-sham_pre_post_scores$ID <- row.names(sham_pre_post_scores)
-sham_pre_post_scores
-rtmswm_cdss_scores_melt_sham <- melt(sham_pre_post_scores[c(1:4,6)])
-rtmswm_cdss_scores_melt_sham
-gdf_sham <- ggplot(data = rtmswm_cdss_scores_melt_sham[c(1:33,67:99),], aes(x = variable, y = value, group = ID))
-gdf_sham  + 
-    geom_line(linewidth=0.75, alpha=0.65)+
-    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="orange", size=2 , fill = "grey", alpha = 0.6) +
-    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
-    geom_point() + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("General Depressive Factor" ) +ylim(-1.5,3.2)
-
-guiltf_sham <- ggplot(data = rtmswm_cdss_scores_melt_sham[c(34:66,100:132),], aes(x = variable, y = value, group = ID))
-guiltf_sham  + 
-    geom_line(linewidth=0.75, alpha=0.65)+
-    stat_smooth(aes(group = 1), method = "lm", se = TRUE, colour="orange", size=2 , fill = "grey", alpha = 0.6) +
-    stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
-    geom_point() + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("Guilt Factor" ) +ylim(-1.5,3.2)
-
-
-wilcox.test(sham_pre_post_scores$`pre factor 1`,sham_pre_post_scores$`post factor 1`, paired= TRUE, alternative = "greater", conf.int = TRUE)
-wilcox.test(sham_pre_post_scores$`pre factor 2`,sham_pre_post_scores$`post factor 2`, paired= TRUE, alternative = "greater")
-```
-
-
-```{r fig.height=3, fig.width=2}
-cdss_prepost_rtmswm
-cdss_prepost_rtmswm$ID <- cdss_prepost_rtmswm$...1
-cdss_prepost_rtmswm_active = cdss_prepost_rtmswm[cdss_prepost_rtmswm$rTMS_Cndt == 'Active',]
-cdss_melt_active = melt(cdss_prepost_rtmswm_active[,3:19])
-
-cdss_melt_active
-
+####active
 cdss_5_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 5 pre',]
 cdss_5_prepost = rbind(cdss_5_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 5 post',])
-
 cdss_5 <- ggplot(data = cdss_5_prepost, aes(x = variable, y = value, group = ID))
 cdss_5   + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -113,10 +31,8 @@ cdss_5   +
 
 
 cdss_melt_active
-
 cdss_4_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 4 pre',]
 cdss_4_prepost = rbind(cdss_4_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 4 post',])
-
 cdss_4 <- ggplot(data = cdss_4_prepost, aes(x = variable, y = value, group = ID))
 cdss_4   + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -128,7 +44,6 @@ cdss_4   +
 
 cdss_1_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 1 pre',]
 cdss_1_prepost = rbind(cdss_1_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 1 post',])
-
 cdss_1 <- ggplot(data = cdss_1_prepost, aes(x = variable, y = value, group = ID))
 cdss_1  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -139,7 +54,6 @@ cdss_1  +
 
 cdss_6_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 6 pre',]
 cdss_6_prepost = rbind(cdss_6_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 6 post',])
-
 cdss_6 <- ggplot(data = cdss_6_prepost, aes(x = variable, y = value, group = ID))
 cdss_6  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -149,7 +63,6 @@ cdss_6  +
 
 cdss_2_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 2 pre',]
 cdss_2_prepost = rbind(cdss_2_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 2 post',])
-
 cdss_2 <- ggplot(data = cdss_2_prepost, aes(x = variable, y = value, group = ID))
 cdss_2  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -161,7 +74,6 @@ cdss_2  +
 
 cdss_3_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 3 pre',]
 cdss_3_prepost = rbind(cdss_3_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 3 post',])
-
 cdss_3 <- ggplot(data = cdss_3_prepost, aes(x = variable, y = value, group = ID))
 cdss_3  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -174,7 +86,6 @@ cdss_3  +
 
 cdss_8_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 8 pre',]
 cdss_8_prepost = rbind(cdss_8_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 8 post',])
-
 cdss_8 <- ggplot(data = cdss_8_prepost, aes(x = variable, y = value, group = ID))
 cdss_8  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -183,12 +94,8 @@ cdss_8  +
     geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 8 Suicide" ) +ylim(0,3)
 
 
-
-
-
 cdss_7_prepost = cdss_melt_active[cdss_melt_active$variable == 'CDSS 7 pre',]
 cdss_7_prepost = rbind(cdss_7_prepost,cdss_melt_active[cdss_melt_active$variable == 'CDSS 7 post',])
-
 cdss_7 <- ggplot(data = cdss_7_prepost, aes(x = variable, y = value, group = ID))
 cdss_7  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -196,10 +103,16 @@ cdss_7  +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="blue") +
     geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 7 Early Wakening" ) +ylim(0,3)
 
-#t.test(cdss_7_prepost$value~ cdss_7_prepost$variable, paired= TRUE, alternative = "greater")
-
+wilcox.test(cdss_1_prepost$value~ cdss_1_prepost$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_2_prepost$value~ cdss_2_prepost$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_3_prepost$value~ cdss_3_prepost$variable, paired= TRUE, alternative = "greater")
 wilcox.test(cdss_4_prepost$value~ cdss_4_prepost$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_5_prepost$value~ cdss_5_prepost$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_6_prepost$value~ cdss_6_prepost$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_7_prepost$value~ cdss_7_prepost$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_8_prepost$value~ cdss_8_prepost$variable, paired= TRUE, alternative = "greater")
 ```
+
 ####sham
 ```{r fig.height=3, fig.width=2}
 cdss_prepost_rtmswm_sham = cdss_prepost_rtmswm[cdss_prepost_rtmswm$rTMS_Cndt == 'Sham',]
@@ -208,7 +121,6 @@ cdss_melt_sham
 
 cdss_1_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 1 pre',]
 cdss_1_prepost_sham = rbind(cdss_1_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 1 post',])
-
 cdss_1_sham <- ggplot(data = cdss_1_prepost_sham, aes(x = variable, y = value, group = ID))
 cdss_1_sham  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -220,7 +132,6 @@ cdss_1_sham  +
 
 cdss_4_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 4 pre',]
 cdss_4_prepost_sham = rbind(cdss_4_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 4 post',])
-
 cdss_4_sham <- ggplot(data = cdss_4_prepost_sham, aes(x = variable, y = value, group = ID))
 cdss_4_sham  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -233,7 +144,6 @@ cdss_4_sham  +
 
 cdss_5_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 5 pre',]
 cdss_5_prepost_sham = rbind(cdss_5_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 5 post',])
-
 cdss_5_sham <- ggplot(data = cdss_5_prepost_sham, aes(x = variable, y = value, group = ID))
 cdss_5_sham  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -244,7 +154,6 @@ cdss_5_sham  +
 
 cdss_6_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 6 pre',]
 cdss_6_prepost_sham = rbind(cdss_6_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 6 post',])
-
 cdss_6_sham <- ggplot(data = cdss_6_prepost_sham, aes(x = variable, y = value, group = ID))
 cdss_6_sham   + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -253,12 +162,8 @@ cdss_6_sham   +
     geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 6 Morning Depression" ) +ylim(0,3)
 
 
-
-
-
 cdss_2_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 2 pre',]
 cdss_2_prepost_sham = rbind(cdss_2_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 2 post',])
-
 cdss_2_sham <- ggplot(data = cdss_2_prepost_sham, aes(x = variable, y = value, group = ID))
 cdss_2_sham  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -270,7 +175,6 @@ cdss_2_sham  +
 
 cdss_3_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 3 pre',]
 cdss_3_prepost_sham = rbind(cdss_3_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 3 post',])
-
 cdss_3_sham <- ggplot(data = cdss_3_prepost_sham, aes(x = variable, y = value, group = ID))
 cdss_3_sham  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -282,7 +186,6 @@ cdss_3_sham  +
 
 cdss_8_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 8 pre',]
 cdss_8_prepost_sham = rbind(cdss_8_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 8 post',])
-
 cdss_8_sham <- ggplot(data = cdss_8_prepost_sham, aes(x = variable, y = value, group = ID))
 cdss_8_sham  + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -294,7 +197,6 @@ cdss_8_sham  +
 
 cdss_7_prepost_sham = cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 7 pre',]
 cdss_7_prepost_sham = rbind(cdss_7_prepost_sham,cdss_melt_sham[cdss_melt_sham$variable == 'CDSS 7 post',])
-
 cdss_7_sham <- ggplot(data = cdss_7_prepost_sham, aes(x = variable, y = value, group = ID))
 cdss_7_sham   + 
     geom_line(linewidth=0.75, alpha=0.65, position = position_dodge(width= 0.2))+
@@ -302,8 +204,13 @@ cdss_7_sham   +
     stat_summary(aes(group = 1), geom = "point", fun = mean, shape = "circle", size = 3, colour="orange") +
     geom_point(position = position_dodge(width= 0.2)) + xlab("Time") +theme_bw() +theme(axis.text.x=element_text(size=18),axis.text.y=element_text(size=18), axis.title.x.bottom = element_text(size=18), axis.title.y.left = element_text(size=18)) +scale_x_discrete(labels = c("Pre", "Post")) +ylab("CDSS 7 Early Wakening" ) +ylim(0,3) 
 
-
-#t.test(cdss_7_prepost_sham$value~ cdss_7_prepost_sham$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_1_prepost_sham$value~ cdss_1_prepost_sham$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_2_prepost_sham$value~ cdss_2_prepost_sham$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_3_prepost_sham$value~ cdss_3_prepost_sham$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_4_prepost_sham$value~ cdss_4_prepost_sham$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_5_prepost_sham$value~ cdss_5_prepost_sham$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_6_prepost_sham$value~ cdss_6_prepost_sham$variable, paired= TRUE, alternative = "greater")
+wilcox.test(cdss_7_prepost_sham$value~ cdss_7_prepost_sham$variable, paired= TRUE, alternative = "greater")
 wilcox.test(cdss_8_prepost_sham$value~ cdss_8_prepost_sham$variable, paired= TRUE, alternative = "greater")
 ```
 
