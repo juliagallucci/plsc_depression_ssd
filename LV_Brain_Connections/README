@@ -1,1 +1,29 @@
+Defining each column in Excel sheets:
 
+x_ROI	- ROI name as defined by Glasser (Glasser et al. 2016) and Tian (Tian et al. 2020) atlas
+
+x_hem	- Hemisphere the ROI belongs to; L (left) or R (right)
+
+x_area	- Brain area the ROI corresponds to 
+
+x_network	- Brain network the ROI corresponds to
+
+y_ROI - ROI name as defined by Glasser (Glasser et al. 2016) and Tian (Tian et al. 2020) atlas
+
+y_area	- Brain area the ROI corresponds to
+
+y_hem	- Hemisphere the ROI belongs to; L (left) or R (right)
+
+y_network	- Brain network the ROI corresponds to
+
+x_y_connection - ROI to ROI connection
+
+x_y_areas	- Area to Area connection
+
+x_y_networks	- Network to Network connection
+
+Hem_connection	- Bilateral (R-L or L-R) or Unilateral connection (L-L or R-R)
+
+Network_connection	- Within or Between-network connection
+
+Weight - PLSC weight 
