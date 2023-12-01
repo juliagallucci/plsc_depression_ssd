@@ -293,13 +293,13 @@ lv3_ci <-  lv3_ci[,1:2] *abs(lv3_ci[,1:2])
 lv3_ci = lv3_ci*-1
 ```
 
+Cross Validation
 ```{r}
-#cross validation
 ## Reading packages ----
 library(purrr) # used in the kfold function
 
 ## Read needed functions ----
-## from https://github.com/juchiyu/Multivariate_functions/tree/main/PLSC-related
+## from https://github.com/juchiyu/Multivariate_functions/tree/main/PLSC-related written by Ju-Chi Yu
 source("ProjectSupplementaryData4PLS.R")
 source("PLS.kFoldCV.R")
 
@@ -325,7 +325,7 @@ LV1X_LV1Xhat_plot <- ggplot2::ggplot(LV1X_LV1Xhat, aes(x = LV1X, y = LV1Xhat)) +
   geom_point() + 
   geom_smooth(method = "lm", se = TRUE, color = "black") + 
   labs(
-       subtitle = "r = 0.60",
+       subtitle = "r = 0.60", #r correlation from lxly.cor output
        x = "LV1 Brain Score",
        y = "Predicted LV1 Brain Score") + theme_classic()
 
