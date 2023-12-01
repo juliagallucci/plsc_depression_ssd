@@ -329,3 +329,167 @@ wilcox.test(sans_avol_prepost_sham$value~ sans_avol_prepost_sham$variable, paire
 wilcox.test(sans_affflat_prepost_sham$value~ sans_affflat_prepost_sham$variable, paired= TRUE, alternative = "greater")
 wilcox.test(sans_alogia_prepost_sham$value~ sans_alogia_prepost_sham$variable, paired= TRUE, alternative = "greater")
 ```
+
+
+LV1 Brain Scores vs Change in General Depression
+PRE rTMS
+```{r}
+#clean pre data
+connections <- read.table("/projects/jgallucci/connections.txt", sep = "\t") #7,664 Connections in top 10 %
+colnames(pre_rs_conn_allparticipants) <- gsub('-','.',colnames(pre_rs_conn_allparticipants))
+sub <- pre_rs_conn_allparticipants[,1]
+pre_rs_conn_allparticipants <- pre_rs_conn_allparticipants[,-1]
+pre_rs_conn_allparticipants <- as.matrix(pre_rs_conn_allparticipants[,colnames(pre_rs_conn_allparticipants) %in% connections$V1])
+rownames(pre_rs_conn_allparticipants)  <- sub$...1
+pre_rs_conn_allparticipants <- pre_rs_conn_allparticipants[rownames(pre_rs_conn_allparticipants) %in% confounds$subjects,]
+dim(pre_rs_conn_allparticipants)
+```
+
+```{r}
+con_mat_pre= data.frame(matrix(ncol=5))
+colnames(con_mat_pre) <- c("record_id","cpz_eq","mean_fd","demo_sex","demo_age_at_enroll")
+con_mat_pre= cbind(confounds[,c(2,5,9,3,4)])
+
+con_mat_pre <- con_mat_pre[,-1]
+rownames(con_mat_pre) <-confounds$subjects
+con_mat_pre$sex <- ifelse(con_mat_pre$sex == "M",1,0)
+con_mat_pre$sex <- as.factor(con_mat_pre$sex)
+```
+
+#regress out confounds
+```{r}
+#brain matrix
+brainmat_pre <- pre_rs_conn_allparticipants
+#Define values.
+val_pred <- colnames(brainmat_pre)
+#Join confounds and values.
+resmat <- cbind(brainmat_pre,con_mat_pre)
+
+#For each value.
+for (val_lab in val_pred) {
+  
+  #Produce residuals.
+  inform <- as.formula(paste0(val_lab,'~',con_mat_pre))
+  respred <- resid(lm(inform,data=resmat))
+  
+  #Replace.
+  brainmat_pre[,val_lab] <- respred
+}
+
+pre_rs_conn_non0_confounds <- data.frame(brainmat_pre)
+rownames(pre_rs_conn_non0_confounds) <- confounds$subjects
+```
+
+
+POST rTMS
+```{r}
+#clean post data
+colnames(post_rs_conn_allparticipants) <- gsub('-','.',colnames(post_rs_conn_allparticipants)) 
+sub <- post_rs_conn_allparticipants[,1]
+post_rs_conn_allparticipants <- post_rs_conn_allparticipants[,-1]
+post_rs_conn_allparticipants <- as.matrix(post_rs_conn_allparticipants[,colnames(post_rs_conn_allparticipants) %in% connections$V1]) #7,664 Connections in top 10 %
+rownames(post_rs_conn_allparticipants)  <- sub$...1
+post_rs_conn_allparticipants <- post_rs_conn_allparticipants[rownames(post_rs_conn_allparticipants) %in% confounds$subjects,]
+dim(post_rs_conn_allparticipants)
+```
+
+```{r}
+con_mat_post= data.frame(matrix(ncol=5))
+colnames(con_mat_post) <- c("record_id","cpz_eq","mean_fd","demo_sex","demo_age_at_enroll")
+con_mat_post= cbind(confounds[,c(2,5,8,3,4)])
+
+con_mat_post <- con_mat_post[,-1]
+rownames(con_mat_post) <-confounds$subjects
+con_mat_post$sex <- ifelse(con_mat_post$sex == "M",1,0)
+con_mat_post$sex <- as.factor(con_mat_post$sex)
+```
+
+#regress out confounds
+```{r}
+#brain matrix
+brainmat_post <- post_rs_conn_allparticipants
+#Define values.
+val_pred <- colnames(brainmat_post)
+#Join confounds and values.
+resmat <- cbind(brainmat_post,con_mat_post)
+
+#For each value.
+for (val_lab in val_pred) {
+  
+  #Produce residuals.
+  inform <- as.formula(paste0(val_lab,'~',con_mat_post))
+  respred <- resid(lm(inform,data=resmat))
+  
+  #Replace.
+  brainmat_post[,val_lab] <- respred
+}
+
+post_rs_conn_non0_confounds <- data.frame(brainmat_post)
+rownames(post_rs_conn_non0_confounds) <- confounds$subjects
+```
+
+
+Center and scale the data according to the original PLSC 
+```{r}
+#pre
+pre_rs_conn_non0_confounds <- pre_rs_conn_non0_confounds[,-1]
+rownames(pre_rs_conn_non0_confounds) <- subs
+
+scaled_pre_rs_conn_non0_confounds <- scale(pre_rs_conn_non0_confounds, center = pls.res_regress$TExPosition.Data$data1.norm$center, scale = pls.res_regress$TExPosition.Data$data1.norm$scale)
+
+#post
+post_rs_conn_non0_confounds <- post_rs_conn_non0_confounds[,-1]
+rownames(post_rs_conn_non0_confounds) <- subs
+
+scaled_post_rs_conn_non0_confounds <- scale(post_rs_conn_non0_confounds, center = pls.res_regress$TExPosition.Data$data1.norm$center, scale = pls.res_regress$TExPosition.Data$data1.norm$scale)
+```
+
+#extract LV1
+```{r}
+pre_brain_matrix <- scaled_pre_rs_conn_non0_confounds %*% pls.res_regress$TExPosition.Data$pdq$p
+LV1_brain_pre <- as.data.frame(pre_brain_matrix[,1])
+colnames(LV1_brain_pre)[1] <- "LV1 Brain Pre" 
+
+
+post_brain_matrix <- scaled_post_rs_conn_non0_confounds %*% pls.res_regress$TExPosition.Data$pdq$p
+LV1_brain_post <- as.data.frame(post_brain_matrix[,1])
+colnames(LV1_brain_post)[1] <- "LV1 Brain Post" 
+
+LV1 <- cbind(LV1_brain_post, LV1_brain_pre)
+
+LV1$`LV1 Brain Change` <- LV1$`LV1 Brain Post` - LV1$`LV1 Brain Pre`
+
+LV1_sham <- LV1[LV1$record_id %in% sham_sub,]
+LV1_active <- LV1[LV1$record_id %in% active_sub,]
+
+LV1_CDSS_ACTIVE<- left_join(LV1_active , rs_cdss_full) #Join CSV with CDSS data
+
+LV1_CDSS_ACTIVE$cdss_gen_dep_pre <- LV1_CDSS_ACTIVE$cdss_001.pre + LV1_CDSS_ACTIVE$cdss_002.pre + LV1_CDSS_ACTIVE$cdss_003.pre + LV1_CDSS_ACTIVE$cdss_006.pre + LV1_CDSS_ACTIVE$cdss_008.pre 
+
+LV1_CDSS_ACTIVE$cdss_gen_dep_post <- LV1_CDSS_ACTIVE$cdss_001.post + LV1_CDSS_ACTIVE$cdss_002.post + LV1_CDSS_ACTIVE$cdss_003.post + LV1_CDSS_ACTIVE$cdss_006.post + LV1_CDSS_ACTIVE$cdss_008.post 
+
+LV1_CDSS_ACTIVE$cdss_gen_dep_change <-  LV1_CDSS_ACTIVE$cdss_gen_dep_post - LV1_CDSS_ACTIVE$cdss_gen_dep_pre 
+
+
+cor.test(LV1_CDSS_ACTIVE$cdss_gen_dep_change,LV1_CDSS_ACTIVE$LV1_change, method = "spearman")
+#p-value = 0.03441, rho 0.3940625
+
+
+LV1_CDSS_SHAM<- left_join(LV1_sham , rs_cdss_full) #Join CSV with CDSS data
+
+LV1_CDSS_SHAM$cdss_gen_dep_pre <- LV1_CDSS_SHAM$cdss_001.pre + LV1_CDSS_SHAM$cdss_002.pre + LV1_CDSS_SHAM$cdss_003.pre + LV1_CDSS_SHAM$cdss_006.pre + LV1_CDSS_SHAM$cdss_008.pre 
+
+LV1_CDSS_SHAM$cdss_gen_dep_post <- LV1_CDSS_SHAM$cdss_001.post + LV1_CDSS_SHAM$cdss_002.post + LV1_CDSS_SHAM$cdss_003.post + LV1_CDSS_SHAM$cdss_006.post + LV1_CDSS_SHAM$cdss_008.post 
+
+LV1_CDSS_SHAM$cdss_gen_dep_change <-  LV1_CDSS_SHAM$cdss_gen_dep_post - LV1_CDSS_SHAM$cdss_gen_dep_pre 
+
+cor.test(LV1_CDSS_SHAM$cdss_gen_dep_change,LV1_CDSS_SHAM$LV1_change, method = "spearman")
+#p-value = 0.8802, rho -0.03709433
+```
+
+Plot Active and Sham change in LV1 Brain vs change in general depressive symptoms
+```{r}
+ggplot(LV1_CDSS_ACTIVE,aes(y=cdss_gen_dep_change,x=LV1_change,color=Condition))+geom_point(colour = "blue", size = 3, alpha = 0.6)+ylab("ΔGeneral Depressive Symptoms (Post - Pre)")+xlab(" Δ LV1 Brain Score (Post - Pre)")+stat_smooth(method="lm",se=TRUE,size=2, colour="blue") + theme_bw()  +theme(axis.text.x=element_text(size=14),axis.text.y=element_text(size=14), axis.title.x.bottom = element_text(size=14), axis.title.y.left = element_text(size=14))
+
+ggplot(LV1_CDSS_SHAM,aes(y=cdss_gen_dep_change,x=LV1_change))+geom_point(colour = "orange", size = 3, alpha = 0.6)+ylab("ΔGeneral Depressive Symptoms (Post - Pre)")+xlab(" Δ LV1 Brain Score (Post - Pre)")+stat_smooth(method="lm",se=TRUE,size=2, colour="orange") + theme_bw()  +theme(axis.text.x=element_text(size=14),axis.text.y=element_text(size=14), axis.title.x.bottom = element_text(size=14), axis.title.y.left = element_text(size=14))
+```
