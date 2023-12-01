@@ -293,6 +293,117 @@ lv3_ci <-  lv3_ci[,1:2] *abs(lv3_ci[,1:2])
 lv3_ci = lv3_ci*-1
 ```
 
+```{r}
+#cross validation
+## Reading packages ----
+library(purrr) # used in the kfold function
+
+## Read needed functions ----
+## from https://github.com/juchiyu/Multivariate_functions/tree/main/PLSC-related
+source("ProjectSupplementaryData4PLS.R")
+source("PLS.kFoldCV.R")
+
+
+## Perform 10-fold validation
+pls.cv <- PLS.kFoldCV(data_X_non0, data_Y_non0, pls.res_regress, k = 10)
+pls.cv$cross.validation.res$lxly.cor$cor.lxlxhat
+pls.cv$cross.validation.res$lxly.cor$cor.lylyhat
+
+##LV1 
+LV1X_LV1Xhat <- data.frame(
+  LV1X = pls.res_regress$TExPosition.Data$lx[,1],
+  LV1Xhat = pls.cv$cross.validation.res$lx.hat[,1]
+)
+
+LV1Y_LV1Yhat <- data.frame(
+  LV1Y = pls.res_regress$TExPosition.Data$ly[,1],
+  LV1Yhat = pls.cv$cross.validation.res$ly.hat[,1]
+)
+
+# Create a scatter plot using ggplot2
+LV1X_LV1Xhat_plot <- ggplot2::ggplot(LV1X_LV1Xhat, aes(x = LV1X, y = LV1Xhat)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = TRUE, color = "black") + 
+  labs(
+       subtitle = "r = 0.60",
+       x = "LV1 Brain Score",
+       y = "Predicted LV1 Brain Score") + theme_classic()
+
+
+LV1Y_LV1Yhat_plot <- ggplot2::ggplot(LV1Y_LV1Yhat, aes(x = LV1Y, y = LV1Yhat)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = TRUE, color = "black") + 
+  labs(
+       subtitle = "r = 0.99",
+       x = "LV1 Clinical Score",
+       y = "Predicted LV1 Clinical Score") + theme_classic()
+
+
+##LV2 
+LV2X_LV2Xhat <- data.frame(
+  LV2X = pls.res_regress$TExPosition.Data$lx[,2],
+  LV2Xhat = pls.cv$cross.validation.res$lx.hat[,2]
+)
+
+LV2Y_LV2Yhat <- data.frame(
+  LV2Y = pls.res_regress$TExPosition.Data$ly[,2],
+  LV2Yhat = pls.cv$cross.validation.res$ly.hat[,2]
+)
+
+
+LV2X_LV2Xhat_plot <- ggplot2::ggplot(LV2X_LV2Xhat, aes(x = LV2X, y = LV2Xhat)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = TRUE, color = "black") + 
+  labs(
+       subtitle = "r = 0.59",
+       x = "LV2 Brain Score",
+       y = "Predicted LV2 Brain Score") + theme_classic()
+
+
+LV2Y_LV2Yhat_plot <- ggplot2::ggplot(LV2Y_LV2Yhat, aes(x = LV2Y, y = LV2Yhat)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = TRUE, color = "black") + 
+  labs(
+       subtitle = "r = 0.97",
+       x = "LV2 Clinical Score",
+       y = "Predicted LV2 Clinical Score") + theme_classic()
+
+##LV3 
+LV3X_LV3Xhat <- data.frame(
+  LV3X = pls.res_regress$TExPosition.Data$lx[,3],
+  LV3Xhat = pls.cv$cross.validation.res$lx.hat[,3]
+)
+
+LV3Y_LV3Yhat <- data.frame(
+  LV3Y = pls.res_regress$TExPosition.Data$ly[,3],
+  LV3Yhat = pls.cv$cross.validation.res$ly.hat[,3]
+)
+
+
+LV3X_LV3Xhat_plot <- ggplot2::ggplot(LV3X_LV3Xhat, aes(x = LV3X, y = LV3Xhat)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = TRUE, color = "black") + 
+  labs(
+       subtitle = "r = 0.81",
+       x = "LV3 Brain Score",
+       y = "Predicted LV3 Brain Score") + theme_classic()
+
+
+LV3Y_LV3Yhat_plot <- ggplot2::ggplot(LV3Y_LV3Yhat, aes(x = LV3Y, y = LV3Yhat)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = TRUE, color = "black") + 
+  labs(subtitle = "r = 0.94",
+       x = "LV3 Clinical Score",
+       y = "Predicted LV3 Clinical Score") + theme_classic()
+
+
+grid.arrange(LV1X_LV1Xhat_plot, LV2X_LV2Xhat_plot,LV3X_LV3Xhat_plot, 
+             LV1Y_LV1Yhat_plot, LV2Y_LV2Yhat_plot, LV3Y_LV3Yhat_plot, 
+             ncol = 3, top = "10-Fold Cross Validation")
+```
+
+
+
 Important Clinical Symptom contributors for LV1
 ```{r fig.height=3, fig.width=4}
 varColors <- list()
